@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <math.h>
 #include "FreeImage.h"
 
 using namespace std ;
@@ -13,6 +14,10 @@ class POINT{
         void print(){
             cout << x << "X " << y << "Y" << endl;
         }
+        int distance(POINT c){
+          int a = sqrt( pow(x - c.x,2) + pow(y - c.y, 2) );
+          return a;
+        }
 };
 
 typedef vector<POINT> pasos;
@@ -25,7 +30,7 @@ void printColor(RGBQUAD color){
     cout << r << "R " << g << "G " << b << "B" << endl;
 }
 
-void newCoords(int * x , int * y){
+void newCoords(int * y){
     *y = 256 - *y;
 }
 
@@ -38,47 +43,41 @@ void drawLine(FIBITMAP * map, POINT a, POINT b, RGBQUAD color){
     }
 }
 
-void printPasos(FIBITMAP * map, pasos camino){
+void printActual(FIBITMAP * map, POINT punto){
     RGBQUAD color;
     color.rgbRed = 255;
     color.rgbGreen = 0;
     color.rgbBlue = 0;
+    punto.print();
+    if ( !FreeImage_SetPixelColor(map, punto.x, punto.y, &color) ){
+      cout <<"Failed printing actual." <<endl;
+    }
+}
+
+void printPasos(FIBITMAP * map, pasos camino){
     for(int x = 0; x < camino.size(); x++){
-      FreeImage_SetPixelColor(map, camino[x].x, camino[x].y, &color);
+      printActual(map, camino[x]);
    }
 }
 
-void printActual(FIBITMAP * map, POINT punto){
-    RGBQUAD color;
-    color.rgbRed = 0;
-    color.rgbGreen = 55;
-    color.rgbBlue = 255;
-    punto.print();
-    FreeImage_SetPixelColor(map, punto.x, punto.y, &color);
-}
-
-POINT start(100,126);
+POINT start(195,109);
 POINT end(187,126);
 RGBQUAD lineColor;
 
 pasos avaiableSteps(FIBITMAP * map, POINT punto){
     pasos camino;
-    int auxX[] = {1,-1,0,0};
-    int auxY[] = {0,0,1,-1};
+    int auxX[] = {1,-1,0,0,0};
+    int auxY[] = {0,0,1,-1,0};
     RGBQUAD color;
 
-    printActual(map, punto);
-    cout << "Trying";
-
-    for (int i = 0; i < 4; i++){
+    for (int i = 0; i < 6; i++){
         FreeImage_GetPixelColor(map, punto.x+auxX[i], punto.y+auxY[i], &color);
         if (color.rgbRed == color.rgbBlue && color.rgbGreen == color.rgbRed){
-            cout << punto.x << "punto.x" << endl;
             POINT r = POINT(punto.x+auxX[i], punto.y+auxY[i]);
-            r.print();
             camino.push_back(r);
         }
     }
+
     return camino;
 }
 
@@ -89,7 +88,8 @@ int main(int argc, char **argv) {
       FIBITMAP * bitmap = FreeImage_Allocate(256, 256, 24);
       FIBITMAP * mapa = FreeImage_Load(FIF_PNG, "minimap.png", PNG_DEFAULT);
       mapa = FreeImage_ConvertTo24Bits(mapa);
-     // cout << FreeImage_GetWidth(mapa) << " Width " << endl << FreeImage_GetHeight(mapa) << " Height " << FreeImage_GetBPP(mapa) << " BPP" << endl ;
+      
+      // Copying map.
       RGBQUAD color; 
       for(int x = 0; x < 256; x++){
         for(int y = 0; y < 256; y++){
@@ -97,10 +97,12 @@ int main(int argc, char **argv) {
             FreeImage_SetPixelColor(bitmap, x, y, &color);
         }
       }
-      start.y = 256-start.y;
+
+      newCoords(&start.y);
+
       pasos p = avaiableSteps(mapa, start);
       printPasos(bitmap, p);
-      //drawLine(bitmap, start, end, lineColor);
+     
       FreeImage_Save(FIF_PNG, bitmap, "Final.png", 0);
       FreeImage_DeInitialise();
       return 0;
