@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
-#include <math.h>
+#include <math.h>     // pow , sqrt
+#include <algorithm>  // std::min_element
+#include <iterator>  // std::begin, std::end
+#include <set>
 #include "FreeImage.h"
 
 using namespace std ;
@@ -14,11 +17,33 @@ class POINT{
         void print(){
             cout << x << "X " << y << "Y" << endl;
         }
+        bool operator==(const POINT &other) const {
+          return (x == other.x && y == other.y);
+        }
+
         int distance(POINT c){
           int a = sqrt( pow(x - c.x,2) + pow(y - c.y, 2) );
           return a;
         }
 };
+
+class Nodo{
+  public:
+    Nodo * padre;
+    POINT * coordenadas;
+    int g, f, h;
+    Nodo(POINT * p, int d): coordenadas(p), g(d) {}
+
+    void print(){
+      //cout << coordenadas << endl;
+      coordenadas->print();
+      cout << g << "G " << f << "F " << h << "H"<< endl<< endl; 
+    }
+};
+
+bool cmpNodo(Nodo a, Nodo b){
+  return a.f < b.f;
+}
 
 typedef vector<POINT> pasos;
 
@@ -64,21 +89,54 @@ POINT start(195,109);
 POINT end(187,126);
 RGBQUAD lineColor;
 
-pasos avaiableSteps(FIBITMAP * map, POINT punto){
-    pasos camino;
-    int auxX[] = {1,-1,0,0,0};
-    int auxY[] = {0,0,1,-1,0};
+vector<Nodo> avaiableSteps(FIBITMAP * map, Nodo start, POINT final){
+    vector<Nodo> camino;
+    POINT punto = *start.coordenadas;
+    int auxX[] = {1,-1,0,0};
+    int auxY[] = {0,0,1,-1};
     RGBQUAD color;
 
-    for (int i = 0; i < 6; i++){
+    for (int i = 0; i < 4; i++){
         FreeImage_GetPixelColor(map, punto.x+auxX[i], punto.y+auxY[i], &color);
         if (color.rgbRed == color.rgbBlue && color.rgbGreen == color.rgbRed){
-            POINT r = POINT(punto.x+auxX[i], punto.y+auxY[i]);
-            camino.push_back(r);
+            POINT * r = new POINT(punto.x+auxX[i], punto.y+auxY[i]);
+            Nodo temp(r, start.g+1);
+            temp.h = r->distance(final);
+            temp.f = temp.g + temp.h;
+            camino.push_back(temp);
         }
     }
 
     return camino;
+}
+
+void pathFinder(FIBITMAP * bitmap, POINT start, POINT final){
+  vector<Nodo> cerrados;
+  vector<Nodo> abiertos;
+  vector<Nodo> vecinos;
+  Nodo inicio(&start, 0);
+  abiertos.push_back(inicio);
+  while(!abiertos.empty()){
+    // Busco el menor F
+    vector<Nodo>::iterator minimo = min_element(abiertos.begin(), abiertos.end(), cmpNodo);
+    Nodo actual = *minimo;
+    if (*actual.coordenadas == final){
+      cout << "LLegamos al destino" << endl;
+      return;
+    }
+    abiertos.erase(minimo);
+    cerrados.push_back(actual);
+    // Busco vecinos. Quiero una lista de Nodo.
+    vecinos = avaiableSteps(bitmap, actual, final);
+    for (vector<Nodo>::iterator it = vecinos.begin(); it != vecinos.end(); ++it) {
+          it->print();
+    }
+    // cout <<"Camino preferido:" <<endl;
+    // vector<Nodo>::iterator minips = min_element(vecinos.begin(), vecinos.end(), cmpNodo);
+    // (*minips).print();
+
+
+  }
 }
 
 
@@ -97,11 +155,33 @@ int main(int argc, char **argv) {
             FreeImage_SetPixelColor(bitmap, x, y, &color);
         }
       }
+      vector<Nodo> abiertos;
+      newCoords(&start.y);
+      newCoords(&end.y);
+      Nodo a(&start, 3);
+      vector<Nodo> prueba = avaiableSteps(mapa, a, end);
+
+      // for (vector<Nodo>::iterator it = prueba.begin(); it != prueba.end(); ++it) {
+      //     it->print();
+      // }
+
+
+      Nodo b(&end, 5);
+      abiertos.push_back(a);
+      abiertos.push_back(b);
+      pathFinder(mapa, start, end);
+      //cout << "WENO: " <<  min.distancia << endl;
+      //cout <<"Camino preferido:" <<endl;
+      vector<Nodo>::iterator minips = min_element(prueba.begin(), prueba.end(), cmpNodo);
+      (*minips).print();
+      prueba.erase(minips);
+      //Nodo min = * min_element(abiertos.begin(), abiertos.end(), cmpNodo);
+      //cout << "WENO: " <<  (*minips).distancia << endl;
 
       newCoords(&start.y);
 
-      pasos p = avaiableSteps(mapa, start);
-      printPasos(bitmap, p);
+      // pasos p = avaiableSteps(mapa, start);
+      // printPasos(bitmap, p);
      
       FreeImage_Save(FIF_PNG, bitmap, "Final.png", 0);
       FreeImage_DeInitialise();
