@@ -9,6 +9,7 @@
 
 using namespace std ;
 
+#define DEBUG 0
 
 class POINT{
     public:
@@ -66,12 +67,12 @@ class Nodo{
     }
 
     void colorear(FIBITMAP * map, bool p){
-        cout << " COLOREANDO " << endl;
+        //cout << " COLOREANDO " << endl;
         printActual(map, *coordenadas, p);
     }
 
     void imprimirCamino(FIBITMAP * map, bool p){
-      this->print();
+      //this->print();
       this->colorear(map,1);
       if (padre != NULL){
         if (this == this->padre){
@@ -115,13 +116,10 @@ void printPasos(FIBITMAP * map, pasos camino){
    }
 }
 
-POINT start(195,108);
-//POINT end(129,126);
-POINT end(187,126);
-RGBQUAD lineColor;
 
-vector<Nodo> avaiableSteps(FIBITMAP * map, Nodo & start, POINT final){
-    vector<Nodo> camino;
+
+vector<Nodo *> avaiableSteps(FIBITMAP * map, Nodo & start, POINT final){
+    vector<Nodo *> camino;
     POINT punto = *start.coordenadas;
     int auxX[] = {1,-1,0,0};
     int auxY[] = {0,0,1,-1};
@@ -138,7 +136,8 @@ vector<Nodo> avaiableSteps(FIBITMAP * map, Nodo & start, POINT final){
             temp->h = r->distance(final);
             temp->f = temp->g + temp->h;
             temp->padre = &start;
-            camino.push_back(*temp);
+            camino.push_back(temp);
+            
         }
     }
 
@@ -153,92 +152,84 @@ void imprimirFs(vector<Nodo> minimo){
   cout << endl << endl;
 }
 
-Nodo* minimoAbiertos(vector<Nodo>& abiertos){
-  Nodo * p = &abiertos.front();
-  for (vector<Nodo>::iterator it = abiertos.begin(); it != abiertos.end(); ++it){
-    cout << (*it).f << " ";
-    if(p->f > (*it).f){
-      cout << "menor" << endl;
-      p = &(*it);
-
+Nodo * minimoAbiertos(vector<Nodo *>& abiertos){
+  if (DEBUG) cout << "Buscando minimo" << endl ;
+  
+  Nodo * p = abiertos.front();
+  for (vector<Nodo *>::iterator it = abiertos.begin(); it != abiertos.end(); ++it){
+   // cout << (*it)->f << " ";
+    if(p->f > (*it)->f){
+      p = (*it);
     }
   } 
-  cout << endl << endl;
-  cout << p->f << endl ;
+  if (DEBUG) cout << "Resultado: " << p->f << endl << endl ; 
   return p;
 }
 
-void pathFinder(FIBITMAP * bitmap, POINT start, POINT final, FIBITMAP * nuevo){
-  vector<Nodo> cerrados;
-  vector<Nodo> abiertos;
-  vector<Nodo> vecinos;
+//POINT start(187,126);
+POINT start(115,81);
+//POINT end(129,126);
+POINT end(155,41);
+RGBQUAD lineColor;
 
-  // Puede morir, no lo necesito.
+bool estaEn(vector <Nodo *> vec, Nodo * obj){
+  for(vector<Nodo *>::iterator it = vec.begin(); it != vec.end(); ++it){
+    if( *(*it) == (*obj) ){
+      return true;
+    }
+  }
+  return false;
+};
+
+void pathFinder(FIBITMAP * bitmap, FIBITMAP * nuevo, POINT start, POINT final){
+  vector<Nodo *> cerrados;
+  vector<Nodo *> abiertos;
+  vector<Nodo *> vecinos;
+
   Nodo inicio(&start, 0);
   Nodo finals(&final, 0);
-  abiertos.push_back(inicio);
-  int i = 0;
-  while(!abiertos.empty()){
-    // Busco el menor F
-    // vector<Nodo>::iterator minimo = min_element(abiertos.begin(), abiertos.end(), cmpNodo);
-     
-    Nodo * actual = minimoAbiertos(abiertos);
-    cout << actual->f << endl ;
-    
-    actual->colorear(nuevo,0);
-    //cout << "Actual: " << &(*minimo) <<endl;
 
-    if (*(actual->coordenadas) == final){
-      cout << "LLegamos al destino" << endl;
-      actual->imprimirCamino(nuevo,1);
-      //actual->colorear(bitmap,0);
-      inicio.colorear(nuevo,1);
-      finals.colorear(nuevo,1);
-      return;
+  abiertos.push_back(&inicio);
+
+int i = 0;
+  while(!abiertos.empty()){
+    // Minimo F
+    Nodo * actual = minimoAbiertos(abiertos);
+    //cout << "Actual:" << endl;
+    actual->colorear(nuevo,0);
+    //actual->print();
+    // Se encontro un camino
+    if (*actual == finals){
+      cout << "Se ha encontrado un camino." << endl;
+      inicio.colorear(nuevo, 1);
+      finals.colorear(nuevo, 1);
+      actual->imprimirCamino(nuevo, 1);
+      break;
     }
-    cout << actual->f << endl ;
-    
-    actual->print();
-    // Busco vecinos. Quiero una lista de Nodo.
-    cerrados.push_back(*actual);
-    actual = &cerrados.back();
+
+    // Cierro nodo
+    cerrados.push_back(actual);
+    // Busco vecinos
     vecinos = avaiableSteps(bitmap, *actual, final);
-    for (vector<Nodo>::iterator it = vecinos.begin(); it != vecinos.end(); ++it) {
-      vector<Nodo>::iterator resultado;
-     // cout << "Hijo:" << endl;
-      //(*it).print() ;
-      if ( (find(cerrados.begin(), cerrados.end(), *it ) != cerrados.end()) ){
+
+    // Chequear cada vecino.
+    for (vector<Nodo * >::iterator it = vecinos.begin(); it != vecinos.end(); ++it) {
+      if ( estaEn(cerrados, *it) ) {
         continue;
       }
-      resultado = find(abiertos.begin(), abiertos.end(), *it );
-      if (resultado == abiertos.end()){
 
-        //cout << "Abriendo camino" << endl;
-        abiertos.push_back(*it);
-        if ((*it).coordenadas->x == 194 && (*it).coordenadas->y == 142){
-          // cout << " METIOENDOLO" << endl;
-          // for (vector<Nodo>::iterator ut = abiertos.begin(); ut != abiertos.end(); ++ut){
-          //   (*ut).print();
-          // }
-          // cout << "EMPEZANDO LISTA" << endl;
-        }
-      } else if ((*resultado).f > (*it).f) {
-        (*resultado).g = (*it).g;
-        (*resultado).h = (*it).h;
-        (*resultado).f = (*it).f;
-        cout << " THIS IS HAPPENING " << endl << endl << endl;
-        (*resultado).padre = (*it).padre;
+      if ( ! estaEn(abiertos, *it) ) {
+        abiertos.push_back((*it));
       }
-
-    }
-    abiertos.erase(find(abiertos.begin(), abiertos.end(), *actual));
-    i++;
-    if (i == 5){
-      return;
     }
 
+    abiertos.erase(find(abiertos.begin(), abiertos.end(), actual));
+    // i++;
+    // if (i == 100){
+    //   break;
+    // }
   }
-  // No hay camino
+
 
 }
 
@@ -263,7 +254,7 @@ int main(int argc, char **argv) {
 
       newCoords(&start.y);
       newCoords(&end.y);
-      pathFinder(mapa, start, end, bitmap);
+      pathFinder(mapa, bitmap, start, end);
 
       // Save
      
