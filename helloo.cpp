@@ -10,7 +10,6 @@
 using namespace std ;
 
 #define DEBUG 0
-#define SIZE 403
 
 class POINT{
     public:
@@ -18,7 +17,7 @@ class POINT{
         int y;
         POINT(int c, int j): x(c), y(j) {}
         void print(){
-            cout << x << "X " <<  SIZE-1-y << "Y" << endl;
+            cout << x << "X " <<  255-y << "Y" << endl;
         }
         bool operator==(const POINT &other) const {
           return (x == other.x && y == other.y);
@@ -104,7 +103,7 @@ void printColor(RGBQUAD color){
 }
 
 void newCoords(int * y){
-    *y = SIZE-1 - *y;
+    *y = 255 - *y;
 }
 
 void drawLine(FIBITMAP * map, POINT a, POINT b, RGBQUAD color){
@@ -136,7 +135,7 @@ vector<Nodo *> avaiableSteps(FIBITMAP * map, Nodo & start, POINT final){
     // }
     for (int i = 0; i < 4; i++){
         FreeImage_GetPixelColor(map, punto.x+auxX[i], punto.y+auxY[i], &color);
-        if (color.rgbRed == 255 && color.rgbGreen == 255 && color.rgbBlue == 255){
+        if (color.rgbRed == color.rgbBlue && color.rgbGreen == color.rgbRed){
             POINT * r = new POINT(punto.x+auxX[i], punto.y+auxY[i]);
             Nodo * temp = new Nodo(r, start.g+1);
             temp->h = r->distance(final);
@@ -173,9 +172,9 @@ Nodo * minimoAbiertos(vector<Nodo *>& abiertos){
 }
 
 //POINT start(187,126);
-POINT start(366,401);
+POINT start(56,249);
 //POINT end(129,126);
-POINT end(402,38);
+POINT end(150,49);
 RGBQUAD lineColor;
 
 bool estaEn(vector <Nodo *> vec, Nodo * obj){
@@ -196,8 +195,7 @@ void pathFinder(FIBITMAP * bitmap, FIBITMAP * nuevo, POINT start, POINT final){
   Nodo finals(&final, 0);
 
   abiertos.push_back(&inicio);
-   inicio.colorear(nuevo, 1);
-      finals.colorear(nuevo, 1);
+
 int i = 0;
   while(!abiertos.empty()){
     // Minimo F
@@ -231,10 +229,10 @@ int i = 0;
     }
 
     abiertos.erase(find(abiertos.begin(), abiertos.end(), actual));
-    i++;
-    if (i == 100000){
-       break;
-   }
+    // i++;
+    // if (i == 100){
+    //   break;
+    // }
   }
 
 
@@ -244,14 +242,14 @@ int i = 0;
 int main(int argc, char **argv) {
 
       FreeImage_Initialise();
-      FIBITMAP * bitmap = FreeImage_Allocate(SIZE, SIZE, 24);
+      FIBITMAP * bitmap = FreeImage_Allocate(256, 256, 24);
       FIBITMAP * mapa = FreeImage_Load(FIF_PNG, "minimap.png", PNG_DEFAULT);
       mapa = FreeImage_ConvertTo24Bits(mapa);
       
       // Copying map.
       RGBQUAD color; 
-      for(int x = 0; x < SIZE; x++){
-        for(int y = 0; y < SIZE; y++){
+      for(int x = 0; x < 256; x++){
+        for(int y = 0; y < 256; y++){
             FreeImage_GetPixelColor(mapa, x, y, &color);
             FreeImage_SetPixelColor(bitmap, x, y, &color);
         }
